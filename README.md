@@ -82,8 +82,26 @@ curl -X POST --data-binary @hello.txt https://{API_ENDPOINT_URL}
 curl -o converted.txt "{download_url}"
 ```
 
+### 複数ファイルをアップロードする場合
+
+複数のファイルを順番にアップロードする場合は、以下のコマンドを実行します。
+
+```bash
+for file in hello1.txt hello2.txt hello3.txt
+do
+    curl -X POST --data-binary @"$file" https://{API_ENDPOINT_URL}
+done
+```
+
+各リクエストごとに個別のダウンロードリンクが返されます。
+
 ## 🔧 注意事項
 
+- S3へのアクセス権限不足によりLambdaが正常に動作しない場合があります。Lambdaの権限設定を確認してください。
+- API Gatewayはデフォルトで最大10MBのリクエストサイズに制限されており、これを超えるファイルはアップロードできません。
+- Lambdaのメモリ割り当てが不十分な場合、メモリ不足によるエラーが発生する可能性があります。
+- Lambdaの同時実行数が制限を超えると、処理が遅延またはエラーになる可能性があります（デフォルトの同時実行数は1000）。
+- AWS Lambdaの最大実行時間は15分のため、それを超える処理は強制終了されます。長時間の処理が必要な場合は、AWS BatchやAWS Fargateなどの利用を検討してください。
 - 本構成はデモ用のため、本番利用時はセキュリティや権限設定を調整してください。
 - 本プロジェクトのコードおよびドキュメントはChatGPTによって作成されました。
 
