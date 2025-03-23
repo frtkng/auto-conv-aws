@@ -1,30 +1,34 @@
-# AWS CDK: S3 → Lambda (Python) → S3 コンバーターサンプル
+# AWS CDK: S3 + Lambda + API Gateway ファイル変換サンプル
 
-AWS CDKを使って、S3にアップロードしたテキストファイルをAWS Lambdaで自動的に変換し、別のS3バケットに保存するサンプルです。
+AWS CDKを使い、S3にファイルをアップロードし、自動的にLambdaで変換後、別のS3バケットに保存する仕組みです。API Gatewayを利用して、一般ユーザーが簡単にcurlでファイルのアップロード・ダウンロードができます。
 
 ## 🧑‍💻 アーキテクチャ
 
 ```
-[S3 (Input)]
-   │（ファイルをアップロード）
+[curl (ユーザー)]
+   │（ファイルをHTTPでアップロード）
    ▼
-[Lambda (Pythonで変換処理)]
-   │（変換後ファイルをアップロード）
+[API Gateway → Lambda]
+   │（S3に保存・変換処理を実行）
    ▼
-[S3 (Output)]
+[S3 (変換前)]
+   │（Lambdaで変換）
+   ▼
+[S3 (変換後)]
 ```
 
 ## 🚀 できること
 
-- 入力用S3バケットにテキストファイルを置くと、自動的にLambdaが起動。
-- Lambda内のPythonスクリプトがテキストを変換（"Hello World" → "Hello Space"）。
-- 変換した結果を出力用S3バケットに保存。
+- curlでAPIにファイルを送信。
+- LambdaがファイルをS3に保存後、変換を実行。
+- 結果のダウンロードURLをcurlに返す。
 
 ## 🛠 構成
 
-- **AWS CDK (Python)**: インフラをコードで管理
-- **AWS Lambda (Python 3.11)**: テキスト変換の実行環境
-- **Amazon S3**: 入力/出力ファイル保存先
+- **AWS CDK (Python)**
+- **AWS Lambda (Python 3.11)**
+- **Amazon API Gateway**
+- **Amazon S3**
 
 ## 📁 プロジェクト構造
 
@@ -34,7 +38,10 @@ cdk/
 ├── cdk/
 │   └── cdk_stack.py
 ├── lambda/
-│   └── handler.py
+│   ├── converter/
+│   │   └── handler.py
+│   └── api/
+│       └── handler.py
 ├── requirements.txt
 └── .gitignore
 ```
@@ -42,42 +49,41 @@ cdk/
 ## 🚩 デプロイ手順
 
 ### 前提
-
-- AWSアカウントおよびAWS CLI設定済み
-- AWS CDKインストール済み
+- AWS CLI & AWS CDK 設定済み
 
 ### 手順
-
-1. 仮想環境を作成してCDKライブラリをインストール
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-2. 初回のみBootstrapを実行
-
-```bash
 cdk bootstrap aws://YOUR_AWS_ACCOUNT_ID/ap-northeast-1
-```
-
-3. CDKデプロイ
-
-```bash
 cdk deploy
 ```
 
 ## ✅ 動作確認
 
-1. AWSコンソールで、作成されたInputバケットに`hello.txt`をアップロード（内容は"Hello World"）。
-2. Outputバケットに`converted-hello.txt`が生成され、内容が"Hello Space"に変換されていることを確認。
+1. curlでファイルアップロード
 
-## 🔧 Lambdaの変換スクリプト修正方法
+```bash
+echo "Hello World" > hello.txt
+curl -X POST --data-binary @hello.txt https://{API_ENDPOINT_URL}
+```
 
-`lambda/handler.py`を編集して再度デプロイすれば、変換ロジックを変更可能です。
+レスポンス例:
 
-## 📝 注意事項
+```json
+{"download_url": "https://s3..."}
+```
 
-- これはプロトタイプ環境を想定した簡易構成です。プロダクション用途ではIAMロールや権限設定をより細かく調整してください。
+2. curlで変換後ファイルをダウンロード
+
+```bash
+curl -o converted.txt "{download_url}"
+```
+
+## 🔧 注意事項
+
+- 本構成はデモ用のため、本番利用時はセキュリティや権限設定を調整してください。
+- 本プロジェクトのコードおよびドキュメントはChatGPTによって作成されました。
 
